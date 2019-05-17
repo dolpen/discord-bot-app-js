@@ -6,7 +6,7 @@ import Debug from 'debug'
 const client = new Client()
 const prefix = '!!'
 const whitelist = (process.env.ALLOWED_ROLES || '').trim().split(',')
-const debug = Debug.debug('bot')
+const debug = Debug('bot')
 
 const operationHandler = new OperationHandler()
 
@@ -95,11 +95,15 @@ operationHandler.addHandler('play', (message, command) => {
     vc.join()
         .then(connection => {
             connection.playArbitraryInput(uri)
-                .on('end',()=>connection.disconnect())
-                .on('error',()=>connection.disconnect());
+                .on('end', () => {
+                    connection.disconnect()
+                })
+                .on('error', (s) => {
+                    debug(s)
+                    connection.disconnect()
+                })
         })
 })
-
 
 
 operationHandler.addHandler('ping', (message) => {
