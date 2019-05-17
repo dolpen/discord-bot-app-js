@@ -5,7 +5,6 @@ import Debug from 'debug'
 
 const client = new Client()
 const prefix = '!!'
-// const whitelist = ['違法バイター', 'Splatoon']
 const whitelist = (process.env.ALLOWED_ROLES || '').trim().split(',')
 const debug = Debug.debug('bot')
 
@@ -61,6 +60,27 @@ operationHandler.addHandler('list', (message) => {
     message.reply(`あなたの Role (削除可能なもの) :\n${roles}`)
 })
 
+operationHandler.addHandler('afk', (message) => {
+    const user = message.mentions.users.first()
+    if (!user) {
+        message.reply('いない気がする')
+        return
+    }
+    const member = message.guild.member(user)
+    if (!member) {
+        message.reply('いない気がする')
+        return
+    }
+    const vc = member.voiceChannel;
+    if (!vc) {
+        message.reply('ボイチャしてない気がする')
+        return
+    }
+    member.setVoiceChannel(null)
+        .then(() => message.react('⭕'))
+        .catch(() => message.react('❌'))
+})
+
 operationHandler.addHandler('ping', (message) => {
     message.reply('pong')
 })
@@ -79,5 +99,6 @@ const token = process.env.DISCORD_TOKEN
 if (!token) {
     debug('Can\'t launch bot without DISCORD_TOKEN environment variable')
 } else {
-    client.login()
+    debug(`DISCORD_TOKEN is ${token}`)
+    client.login(token)
 }
