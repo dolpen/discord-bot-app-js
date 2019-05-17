@@ -71,7 +71,7 @@ operationHandler.addHandler('afk', (message) => {
         message.reply('いない気がする')
         return
     }
-    const vc = member.voiceChannel;
+    const vc = member.voiceChannel
     if (!vc) {
         message.reply('ボイチャしてない気がする')
         return
@@ -87,13 +87,13 @@ operationHandler.addHandler('play', (message, command) => {
         message.reply('URL 指定して')
         return
     }
-    const vc = message.member.voiceChannel;
+    const vc = message.member.voiceChannel
     if (!vc) {
         message.reply('ボイチャしてない気がする')
         return
     }
     vc.join()
-        .then(connection => {
+        .then((connection) => {
             connection.playArbitraryInput(uri)
                 .on('end', () => {
                     connection.disconnect()
@@ -104,7 +104,6 @@ operationHandler.addHandler('play', (message, command) => {
                 })
         })
 })
-
 
 operationHandler.addHandler('ping', (message) => {
     message.reply('pong')
