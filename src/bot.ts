@@ -81,6 +81,27 @@ operationHandler.addHandler('afk', (message) => {
         .catch(() => message.react('❌'))
 })
 
+operationHandler.addHandler('play', (message, command) => {
+    const uri = command.getParam(0)
+    if (!uri) {
+        message.reply('URL 指定して')
+        return
+    }
+    const vc = message.member.voiceChannel;
+    if (!vc) {
+        message.reply('ボイチャしてない気がする')
+        return
+    }
+    vc.join()
+        .then(connection => {
+            connection.playArbitraryInput(uri)
+                .on('end',()=>connection.disconnect())
+                .on('error',()=>connection.disconnect());
+        })
+})
+
+
+
 operationHandler.addHandler('ping', (message) => {
     message.reply('pong')
 })
