@@ -1,4 +1,4 @@
-import {Client, GuildMember, Message, Role} from 'discord.js'
+import {Client, Message} from 'discord.js'
 import ytdl from 'ytdl-core'
 import Debug from 'debug'
 import {Command} from './models/command'
@@ -16,11 +16,11 @@ const operationHandler = new OperationHandler()
 
 const roleOperation = (message: Message, command: Command) => {
     const nameOption = command.getParam(0)
-    const memberOption = new Optional(message.member)
+    const memberOption = Optional(message.member)
     const roleOption = nameOption.flatMap((name) => {
-        return new Optional(message.guild).map((g) => {
-            const roles = g.roles.filter((role) => role.name === name).array()
-            return roles.length > 0 ? roles[0] : undefined
+        return Optional(message.guild).map((g) => {
+            const roles = g!.roles.filter((role) => role.name === name).array()
+            return roles.length > 0 ? roles[0] : null
         })
     })
     return Promise.all([memberOption.toPromise(), roleOption.toPromise()])
@@ -29,9 +29,7 @@ const roleOperation = (message: Message, command: Command) => {
 // メンバーにロールを付与する
 operationHandler.addHandler('add', (message, command) => {
     roleOperation(message, command).then(([member, role]) => {
-        // フロー的には発生しない promise の null resolve が原因、消したい
-        // @ts-ignore
-        member.roles.add(role.id)
+        member!.roles.add(role!.id)
             .then(() => message.react(EMOJI_OK))
             .catch(() => message.react(EMOJI_NG))
     }).catch(() => message.react(EMOJI_NG))
@@ -40,8 +38,7 @@ operationHandler.addHandler('add', (message, command) => {
 // メンバーからロールを削除する
 operationHandler.addHandler('remove', (message, command) => {
     roleOperation(message, command).then(([member, role]) => {
-        // @ts-ignore
-        member.roles.remove(role.id)
+        member!.roles.remove(role!.id)
             .then(() => message.react(EMOJI_OK))
             .catch(() => message.react(EMOJI_NG))
     }).catch(() => message.react(EMOJI_NG))
@@ -49,8 +46,8 @@ operationHandler.addHandler('remove', (message, command) => {
 
 // メンバーに付与できるロールを一覧する
 operationHandler.addHandler('all', (message) => {
-    new Optional(message.guild).map((guild) => {
-        return guild.roles
+    Optional(message.guild).map((guild) => {
+        return guild!.roles
             .map((role) => role.name)
             .filter((name) => whitelist.indexOf(name) >= 0)
             .join('\n')
@@ -63,8 +60,8 @@ operationHandler.addHandler('all', (message) => {
 
 // メンバー付与されているロールを一覧する
 operationHandler.addHandler('list', (message) => {
-    new Optional(message.member).map((member) => {
-        return member.roles
+    Optional(message.member).map((member) => {
+        return member!.roles
             .map((role) => role.name)
             .filter((name) => whitelist.indexOf(name) >= 0)
             .join('\n')
@@ -77,12 +74,11 @@ operationHandler.addHandler('list', (message) => {
 
 // メンション先のメンバーをVC切断させる
 operationHandler.addHandler('afk', (message) => {
-    new Optional(message.guild).map((guild) => {
+    Optional(message.guild).map((guild) => {
         const user = message.mentions.users.first()
-        return user ? guild.member(user) : undefined
+        return user ? guild!.member(user) : null
     }).map((member) => {
-        // @ts-ignore
-        return member.voice
+        return member!.voice
     }).toPromise().then((voiceConnection) => {
         if (voiceConnection.channel) {
             voiceConnection.setChannel(null)
@@ -98,8 +94,8 @@ operationHandler.addHandler('afk', (message) => {
 
 operationHandler.addHandler('play', (message, command) => {
     const urlOption = command.getParam(0)
-    const channelOption = new Optional(message.member).map((member) => {
-        return member.voice.channel
+    const channelOption = Optional(message.member).map((member) => {
+        return member!.voice.channel
     })
     Promise.all([urlOption.toPromise(), channelOption.toPromise()])
         .then(([url, channel]) => {
@@ -108,7 +104,7 @@ operationHandler.addHandler('play', (message, command) => {
             }
             channel.join()
                 .then((connection) => {
-                    const dl = ytdl(url, {filter: 'audioonly'})
+                    const dl = ytdl(url!, {filter: 'audioonly'})
                         .on('error', (error) => {
                             debug(error.message)
                         })

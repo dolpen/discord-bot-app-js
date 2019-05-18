@@ -1,34 +1,14 @@
-export class Optional<T> {
-    private readonly value: T | null
+import {None} from './none'
+import {Some} from './some'
 
-    constructor(v: T | null | undefined) {
-        this.value = v === null || v === undefined ? null : v
-    }
+type Optional<T> = Some<T> | None<T>
 
-    public map<U>(apply: (src: T) => U): Optional<U> {
-        const mapped = (this.value) ? apply(this.value) : null
-        return new Optional(mapped)
+export const Optional = <T>(value: T): Optional<T> => {
+    if (value === null) {
+        return new None()
     }
-
-    public flatMap<U>(apply: (src: T) => Optional<U>): Optional<U> {
-        return (this.value) ? apply(this.value) : new Optional<U>(null)
+    if (value === undefined) {
+        return new None()
     }
-
-    public orElseGet(gen: () => T): T {
-        return (this.value) ? this.value : gen()
-    }
-
-    public orElse(def: T): T {
-        return this.orElseGet(() => {
-            return def
-        })
-    }
-
-    public toPromise(): Promise<T> {
-        if (this.value !== null) {
-            return Promise.resolve(this.value)
-        } else {
-            return Promise.reject()
-        }
-    }
+    return new Some(value!)
 }
