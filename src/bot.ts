@@ -1,4 +1,5 @@
 import {Client} from 'discord.js'
+import ytdl from 'ytdl-core'
 import {Command} from './models/command'
 import {OperationHandler} from './handlers'
 import Debug from 'debug'
@@ -16,13 +17,16 @@ operationHandler.addHandler('add', (message, command) => {
         message.reply('Role の名前指定して')
         return
     }
+    if (!message.guild || !message.member) {
+        message.reply('Role があるサーバー上で指定してください')
+        return
+    }
     const filteredRole = message.guild.roles.filter((role) => role.name === roleName).array()
     if (whitelist.indexOf(roleName) < 0) {
         message.reply('その Role はダメなやつです。')
         return
     }
-    message.member
-        .addRole(filteredRole[0].id)
+    message.member.roles.add(filteredRole[0].id)
         .then(() => message.react('⭕'))
         .catch(() => message.react('❌'))
 })
@@ -33,18 +37,25 @@ operationHandler.addHandler('remove', (message, command) => {
         message.reply('Role の名前指定して')
         return
     }
+    if (!message.guild || !message.member) {
+        message.reply('サーバー上で発言してください')
+        return
+    }
     const filteredRole = message.guild.roles.filter((role) => role.name === roleName).array()
     if (whitelist.indexOf(roleName) < 0) {
         message.reply('その Role はダメなやつです。')
         return
     }
-    message.member
-        .removeRole(filteredRole[0].id)
+    message.member.roles.remove(filteredRole[0].id)
         .then(() => message.react('⭕'))
         .catch(() => message.react('❌'))
 })
 
 operationHandler.addHandler('all', (message) => {
+    if (!message.guild) {
+        message.reply('サーバー上で発言してください')
+        return
+    }
     const roles = message.guild.roles
         .map((role) => role.name)
         .filter((name) => whitelist.indexOf(name) >= 0)
@@ -53,6 +64,10 @@ operationHandler.addHandler('all', (message) => {
 })
 
 operationHandler.addHandler('list', (message) => {
+    if (!message.member) {
+        message.reply('サーバー上で発言してください')
+        return
+    }
     const roles = message.member.roles
         .map((role) => role.name)
         .filter((name) => whitelist.indexOf(name) >= 0)
@@ -61,6 +76,10 @@ operationHandler.addHandler('list', (message) => {
 })
 
 operationHandler.addHandler('afk', (message) => {
+    if (!message.guild) {
+        message.reply('サーバー上で指定してください')
+        return
+    }
     const user = message.mentions.users.first()
     if (!user) {
         message.reply('いない気がする')
@@ -71,38 +90,48 @@ operationHandler.addHandler('afk', (message) => {
         message.reply('いない気がする')
         return
     }
-    const vc = member.voiceChannel
+    const vc = member.voice.channel
     if (!vc) {
         message.reply('ボイチャしてない気がする')
         return
     }
-    member.setVoiceChannel(null)
+    member.voice.setChannel(null)
         .then(() => message.react('⭕'))
         .catch(() => message.react('❌'))
 })
 
 operationHandler.addHandler('play', (message, command) => {
+    if (!message.member) {
+        message.reply('サーバー上で指定してください')
+        return
+    }
+
     const uri = command.getParam(0)
     if (!uri) {
         message.reply('URL 指定して')
         return
     }
-    const vc = message.member.voiceChannel
+    const vc = message.member.voice.channel
     if (!vc) {
         message.reply('ボイチャしてない気がする')
         return
     }
     vc.join()
         .then((connection) => {
-            connection.playArbitraryInput(uri)
+            const dl = ytdl(uri, {filter: 'audioonly'})
+                .on('error', (error) => {
+                    debug(error.message)
+                })
+            const dispatcher = connection.play(dl)
                 .on('end', () => {
                     connection.disconnect()
-                })
-                .on('error', (s) => {
-                    debug(s)
+                }).on('error', (error) => {
+                    debug(error.message)
                     connection.disconnect()
                 })
-        })
+        }).catch((reason) => {
+        debug(reason)
+    })
 })
 
 operationHandler.addHandler('ping', (message) => {
