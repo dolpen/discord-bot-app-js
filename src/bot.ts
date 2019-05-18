@@ -1,4 +1,4 @@
-import {Client, GuildMember, Message} from 'discord.js'
+import {Client, Message} from 'discord.js'
 import ytdl from 'ytdl-core'
 import Debug from 'debug'
 import {Command} from './models/command'
