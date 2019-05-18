@@ -1,9 +1,12 @@
-import {Client} from 'discord.js'
+import {Client, GuildMember, Message, Role} from 'discord.js'
 import ytdl from 'ytdl-core'
+import Debug from 'debug'
 import {Command} from './models/command'
 import {OperationHandler} from './handlers'
-import Debug from 'debug'
+import {Optional} from './langs/optional'
 
+const EMOJI_OK = '⭕'
+const EMOJI_NG = '❌'
 const client = new Client()
 const prefix = '!!'
 const whitelist = (process.env.ALLOWED_ROLES || '').trim().split(',')
@@ -11,125 +14,119 @@ const debug = Debug('bot')
 
 const operationHandler = new OperationHandler()
 
+const roleOperation = (message: Message, command: Command) => {
+    const nameOption = command.getParam(0)
+    const memberOption = new Optional(message.member)
+    const roleOption = nameOption.flatMap((name) => {
+        return new Optional(message.guild).map((g) => {
+            const roles = g.roles.filter((role) => role.name === name).array()
+            return roles.length > 0 ? roles[0] : undefined
+        })
+    })
+    return Promise.all([memberOption.toPromise(), roleOption.toPromise()])
+}
+
+// メンバーにロールを付与する
 operationHandler.addHandler('add', (message, command) => {
-    const roleName = command.getParam(0)
-    if (!roleName) {
-        message.reply('Role の名前指定して')
-        return
-    }
-    if (!message.guild || !message.member) {
-        message.reply('Role があるサーバー上で指定してください')
-        return
-    }
-    const filteredRole = message.guild.roles.filter((role) => role.name === roleName).array()
-    if (whitelist.indexOf(roleName) < 0) {
-        message.reply('その Role はダメなやつです。')
-        return
-    }
-    message.member.roles.add(filteredRole[0].id)
-        .then(() => message.react('⭕'))
-        .catch(() => message.react('❌'))
+    roleOperation(message, command).then(([member, role]) => {
+        // フロー的には発生しない promise の null resolve が原因、消したい
+        // @ts-ignore
+        member.roles.add(role.id)
+            .then(() => message.react(EMOJI_OK))
+            .catch(() => message.react(EMOJI_NG))
+    }).catch(() => message.react(EMOJI_NG))
 })
 
+// メンバーからロールを削除する
 operationHandler.addHandler('remove', (message, command) => {
-    const roleName = command.getParam(0)
-    if (!roleName) {
-        message.reply('Role の名前指定して')
-        return
-    }
-    if (!message.guild || !message.member) {
-        message.reply('サーバー上で発言してください')
-        return
-    }
-    const filteredRole = message.guild.roles.filter((role) => role.name === roleName).array()
-    if (whitelist.indexOf(roleName) < 0) {
-        message.reply('その Role はダメなやつです。')
-        return
-    }
-    message.member.roles.remove(filteredRole[0].id)
-        .then(() => message.react('⭕'))
-        .catch(() => message.react('❌'))
+    roleOperation(message, command).then(([member, role]) => {
+        // @ts-ignore
+        member.roles.remove(role.id)
+            .then(() => message.react(EMOJI_OK))
+            .catch(() => message.react(EMOJI_NG))
+    }).catch(() => message.react(EMOJI_NG))
 })
 
+// メンバーに付与できるロールを一覧する
 operationHandler.addHandler('all', (message) => {
-    if (!message.guild) {
+    new Optional(message.guild).map((guild) => {
+        return guild.roles
+            .map((role) => role.name)
+            .filter((name) => whitelist.indexOf(name) >= 0)
+            .join('\n')
+    }).toPromise().then((roles) => {
+        message.reply(`このサーバーの Role (追加/削除可能なもの) :\n${roles}`)
+    }).catch(() => {
         message.reply('サーバー上で発言してください')
-        return
-    }
-    const roles = message.guild.roles
-        .map((role) => role.name)
-        .filter((name) => whitelist.indexOf(name) >= 0)
-        .join('\n')
-    message.reply(`このサーバーの Role (追加/削除可能なもの) :\n${roles}`)
+    })
 })
 
+// メンバー付与されているロールを一覧する
 operationHandler.addHandler('list', (message) => {
-    if (!message.member) {
+    new Optional(message.member).map((member) => {
+        return member.roles
+            .map((role) => role.name)
+            .filter((name) => whitelist.indexOf(name) >= 0)
+            .join('\n')
+    }).toPromise().then((roles) => {
+        message.reply(`あなたの Role (削除可能なもの) :\n${roles}`)
+    }).catch(() => {
         message.reply('サーバー上で発言してください')
-        return
-    }
-    const roles = message.member.roles
-        .map((role) => role.name)
-        .filter((name) => whitelist.indexOf(name) >= 0)
-        .join('\n')
-    message.reply(`あなたの Role (削除可能なもの) :\n${roles}`)
+    })
 })
 
+// メンション先のメンバーをVC切断させる
 operationHandler.addHandler('afk', (message) => {
-    if (!message.guild) {
-        message.reply('サーバー上で指定してください')
-        return
-    }
-    const user = message.mentions.users.first()
-    if (!user) {
-        message.reply('いない気がする')
-        return
-    }
-    const member = message.guild.member(user)
-    if (!member) {
-        message.reply('いない気がする')
-        return
-    }
-    const vc = member.voice.channel
-    if (!vc) {
-        message.reply('ボイチャしてない気がする')
-        return
-    }
-    member.voice.setChannel(null)
-        .then(() => message.react('⭕'))
-        .catch(() => message.react('❌'))
+    new Optional(message.guild).map((guild) => {
+        const user = message.mentions.users.first()
+        return user ? guild.member(user) : undefined
+    }).map((member) => {
+        // @ts-ignore
+        return member.voice
+    }).toPromise().then((voiceConnection) => {
+        if (voiceConnection.channel) {
+            voiceConnection.setChannel(null)
+                .then(() => message.react(EMOJI_OK))
+                .catch(() => message.react(EMOJI_NG))
+        } else {
+            message.reply('VCしてない気がする')
+        }
+    }).catch(() => {
+        message.reply('サーバーにいない気がする')
+    })
 })
 
 operationHandler.addHandler('play', (message, command) => {
-    if (!message.member) {
-        message.reply('サーバー上で指定してください')
-        return
-    }
-
-    const uri = command.getParam(0)
-    if (!uri) {
-        message.reply('URL 指定して')
-        return
-    }
-    const vc = message.member.voice.channel
-    if (!vc) {
-        message.reply('ボイチャしてない気がする')
-        return
-    }
-    vc.join()
-        .then((connection) => {
-            const dl = ytdl(uri, {filter: 'audioonly'})
-                .on('error', (error) => {
-                    debug(error.message)
+    const urlOption = command.getParam(0)
+    const channelOption = new Optional(message.member).map((member) => {
+        return member.voice.channel
+    })
+    Promise.all([urlOption.toPromise(), channelOption.toPromise()])
+        .then(([url, channel]) => {
+            if (!channel) {
+                return
+            }
+            channel.join()
+                .then((connection) => {
+                    const dl = ytdl(url, {filter: 'audioonly'})
+                        .on('error', (error) => {
+                            debug(error.message)
+                        })
+                    connection.play(dl)
+                        .on('end', () => {
+                            connection.disconnect()
+                        }).on('error', (error) => {
+                        debug(error.message)
+                        connection.disconnect()
+                    })
+                    message.react(EMOJI_OK)
                 })
-            const dispatcher = connection.play(dl)
-                .on('end', () => {
-                    connection.disconnect()
-                }).on('error', (error) => {
-                    debug(error.message)
-                    connection.disconnect()
+                .catch((reason) => {
+                    message.react(EMOJI_NG)
+                    debug(reason)
                 })
         }).catch((reason) => {
+        message.react(EMOJI_NG)
         debug(reason)
     })
 })

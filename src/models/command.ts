@@ -1,3 +1,5 @@
+import {Optional} from '../langs/optional'
+
 export class Command {
     private readonly operation: string
     private readonly params: string[]
@@ -24,7 +26,7 @@ export class Command {
         return this.params.length
     }
 
-    public getParam(index: number): string | null {
-        return index >= this.params.length ? null : this.params[index]
+    public getParam(index: number): Optional<string> {
+        return new Optional(index >= this.params.length ? null : this.params[index])
     }
 }
