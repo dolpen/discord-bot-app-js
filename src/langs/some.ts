@@ -1,18 +1,18 @@
 import {IOptionalLike} from './optionalLike'
-import {Optional} from './optional'
+import {Optional, OptionalOf} from './optional'
 
 export class Some<T> implements IOptionalLike<T> {
-    private readonly value: T
+    private readonly value!: T
 
     constructor(v: T) {
         this.value = v
     }
 
-    public map<U>(apply: (src: T) => U): IOptionalLike<U> {
-        return Optional<U>(apply(this.value!))
+    public map<U>(apply: (src: NonNullable<T>) => U): Optional<U> {
+        return OptionalOf(apply(this.value!))
     }
 
-    public flatMap<U>(apply: (src: T) => IOptionalLike<U>): IOptionalLike<U> {
+    public flatMap<U>(apply: (src: NonNullable<T>) => Optional<U>): Optional<U> {
         return apply(this.value!)
     }
 
@@ -26,7 +26,7 @@ export class Some<T> implements IOptionalLike<T> {
         })
     }
 
-    public toPromise(): Promise<T> {
+    public toPromise(): Promise<NonNullable<T>> {
         return Promise.resolve(this.value!)
     }
 }

@@ -1,12 +1,13 @@
 import {IOptionalLike} from './optionalLike'
+import {Optional} from './optional'
 
 export class None<T> implements IOptionalLike<T> {
 
-    public map<U>(apply: (src: T) => U): IOptionalLike<U> {
+    public map<U>(apply: (src: NonNullable<T>) => U): Optional<U> {
         return new None<U>()
     }
 
-    public flatMap<U>(apply: (src: T) => IOptionalLike<U>): IOptionalLike<U> {
+    public flatMap<U>(apply: (src: NonNullable<T>) => Optional<U>): Optional<U> {
         return new None<U>()
     }
 
@@ -18,7 +19,7 @@ export class None<T> implements IOptionalLike<T> {
         return def
     }
 
-    public toPromise(): Promise<T> {
+    public toPromise(): Promise<NonNullable<T>> {
         return Promise.reject()
     }
 }

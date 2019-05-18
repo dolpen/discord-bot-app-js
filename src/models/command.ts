@@ -1,5 +1,4 @@
-import {Optional} from '../langs/optional'
-import {IOptionalLike} from '../langs/optionalLike'
+import {OptionalOf} from '../langs/optional'
 
 export class Command {
     private readonly operation: string
@@ -28,6 +27,6 @@ export class Command {
     }
 
     public getParam(index: number) {
-        return Optional(index >= this.params.length ? null : this.params[index])
+        return OptionalOf(index >= this.params.length ? null : this.params[index])
     }
 }
