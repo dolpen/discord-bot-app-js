@@ -24,7 +24,7 @@ operationHandler.addHandler('match', (message) => {
     OptionalOf(message.member).map((member) => {
         return member.voice.channel
     }).map((channel) => {
-        return channel.members.filter(m => m.voice.selfMute === true)
+        return channel.members.filter(m => m.voice.selfMute === false && m.voice.selfDeaf == false)
     }).map((members) => {
         if (members.size != 8) return null;
         return matchOption(members.map(m => m.displayName))
