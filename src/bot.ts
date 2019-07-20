@@ -11,8 +11,29 @@ const client = new Client()
 const prefix = '!!'
 const whitelist = (process.env.ALLOWED_ROLES || '').trim().split(',')
 const debug = Debug('bot')
+const pt = [15, 51, 85, 105, 153, 165, 195];
 
 const operationHandler = new OperationHandler()
+const matchOption = (names: string[]) => {
+    return pt.map((p, i) => {
+        return "" + (i + 1) + " : " + [0, 1, 2, 3, 4, 5, 6, 7].filter(i => (p & (1 << i)) > 0).map(i => names[i]).join(',')
+    }).join('\n')
+}
+
+operationHandler.addHandler('match', (message) => {
+    OptionalOf(message.member).map((member) => {
+        return member.voice.channel
+    }).map((channel) => {
+        return channel.members.filter(m => m.voice.selfMute === true)
+    }).map((members) => {
+        if (members.size != 8) return null;
+        return matchOption(members.map(m => m.displayName))
+    }).toPromise()
+        .then((data) => {
+            message.reply(`アルファチームのみ記載\n${data}`)
+        })
+        .catch(() => message.react(EMOJI_NG))
+})
 
 const roleOperation = (message: Message, command: Command) => {
     const nameOption = command.getParam(0)
