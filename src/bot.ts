@@ -1,4 +1,4 @@
-import {Client, Message} from 'discord.js'
+import {Client, Message, TextChannel} from 'discord.js'
 import ytdl from 'ytdl-core'
 import Debug from 'debug'
 import {Command} from './models/command'
@@ -8,7 +8,7 @@ import {OptionalOf} from './langs/optional'
 const EMOJI_OK = '⭕'
 const EMOJI_NG = '❌'
 const client = new Client()
-const prefix = '!!'
+const prefix = '//'
 const whitelist = (process.env.ALLOWED_ROLES || '').trim().split(',')
 const debug = Debug('bot')
 const pt = [15, 51, 85, 105, 153, 165, 195];
@@ -16,7 +16,9 @@ const pt = [15, 51, 85, 105, 153, 165, 195];
 const operationHandler = new OperationHandler()
 const matchOption = (names: string[]) => {
     return pt.map((p, i) => {
-        return "" + (i + 1) + " : " + [0, 1, 2, 3, 4, 5, 6, 7].filter(i => (p & (1 << i)) > 0).map(i => names[i]).join(',')
+        return '' + (i + 1) + ' : ' + [0, 1, 2, 3, 4, 5, 6, 7]
+            .filter((c) => (p & (1 << c)) > 0)
+            .map(i => names[i]).join(',')
     }).join('\n')
 }
 
@@ -113,6 +115,37 @@ operationHandler.addHandler('afk', (message) => {
     })
 })
 
+// レポート
+operationHandler.addHandler('report', (message) => {
+    const now = new Date();
+    const border = now.getTime() - 30 * 86400 * 1000
+    const getLastUpdated = (channel: TextChannel) => {
+        return OptionalOf(channel.lastMessage).map((latest) => {
+            return latest.createdAt
+        }).orElse(channel.createdAt)
+    }
+    OptionalOf(message.guild).map((guild) => {
+        return guild.channels
+    }).toPromise().then((channels) => {
+        const names = channels.array().filter((channel) => {
+            return channel.type === 'text'
+        }).map((channel) => {
+            return channel as TextChannel
+        }).filter((channel) => {
+            return getLastUpdated(channel).getTime() < border
+        }).map((channel) => {
+            const passed = Math.floor((now.getTime() - getLastUpdated(channel).getTime()) / (86400 * 1000))
+            const parent = OptionalOf(channel.parent).map((cate) => {
+                return cate.name
+            }).orElse('')
+            return `${parent}/${channel.name} : ${passed} day(s) ago`
+        }).join('\n')
+        message.reply(`channels :\n${names}`)
+    }).catch(() => {
+        message.reply('サーバーにいない気がする')
+    })
+})
+
 operationHandler.addHandler('play', (message, command) => {
     const urlOption = command.getParam(0)
     const channelOption = OptionalOf(message.member).map((member) => {
@@ -154,6 +187,12 @@ client.on('ready', () => {
 })
 
 client.on('message', (message) => {
+    if (!(message instanceof Message)) {
+        return
+    }
+    if (message.content === null) {
+        return
+    }
     const command = new Command(prefix, message.content)
     operationHandler.invoke(message, command)
 })

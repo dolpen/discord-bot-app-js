@@ -4,6 +4,14 @@
 $ npm install
 ```
 
+## Discord API
+
+* https://discordapp.com/developers/applications からアプリケーション作成
+* アプリケーションの `BOT` タブから BOT アカウント追加
+  * PUBLIC を オフ
+* `OAuth2` タブから bot 権限と bot が行使するパーミッション入れてURL生成して踏む
+
+
 ## ローカルで実行
 
 ```
