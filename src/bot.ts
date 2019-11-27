@@ -8,7 +8,7 @@ import {OptionalOf} from './langs/optional'
 const EMOJI_OK = '⭕'
 const EMOJI_NG = '❌'
 const client = new Client()
-const prefix = '//'
+const prefix = '!!'
 const whitelist = (process.env.ALLOWED_ROLES || '').trim().split(',')
 const debug = Debug('bot')
 const pt = [15, 51, 85, 105, 153, 165, 195];
