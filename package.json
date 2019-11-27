@@ -3,6 +3,9 @@
   "description": "popopo",
   "version": "0.0.1",
   "main": "dist/bot.js",
+  "engines": {
+    "node": "10.x"
+  },
   "scripts": {
     "ts:watch": "tsc -w",
     "ts:build": "tsc",
