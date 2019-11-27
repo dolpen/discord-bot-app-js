@@ -120,8 +120,9 @@ operationHandler.addHandler('report', (message) => {
     const now = new Date();
     const border = now.getTime() - 30 * 86400 * 1000
     const getLastUpdated = (channel: TextChannel) => {
-        return OptionalOf(channel.lastMessage).map((latest) => {
-            return latest.createdAt
+        return OptionalOf(channel.lastMessageID).map((snowflake) => {
+            const id = Number(snowflake)
+            return new Date(Math.floor((id / 4194304)) + 1420070400000)
         }).orElse(channel.createdAt)
     }
     OptionalOf(message.guild).map((guild) => {
@@ -130,15 +131,19 @@ operationHandler.addHandler('report', (message) => {
         const names = channels.array().filter((channel) => {
             return channel.type === 'text'
         }).map((channel) => {
-            return channel as TextChannel
-        }).filter((channel) => {
-            return getLastUpdated(channel).getTime() < border
-        }).map((channel) => {
-            const passed = Math.floor((now.getTime() - getLastUpdated(channel).getTime()) / (86400 * 1000))
-            const parent = OptionalOf(channel.parent).map((cate) => {
+            const chat = channel as TextChannel
+            return {
+                channel: chat,
+                time: getLastUpdated(chat),
+            }
+        }).filter((info) => {
+            return info.time.getTime() < border
+        }).map((info) => {
+            const passed = Math.floor((now.getTime() - info.time.getTime()) / (86400 * 1000))
+            const parent = OptionalOf(info.channel.parent).map((cate) => {
                 return cate.name
             }).orElse('')
-            return `${parent}/${channel.name} : ${passed} day(s) ago`
+            return `${parent} / ${info.channel.name} : ${passed} days ago`
         }).join('\n')
         message.reply(`channels :\n${names}`)
     }).catch(() => {

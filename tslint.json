@@ -13,6 +13,7 @@
       true,
       "never"
     ],
+    "no-bitwise": true,
     "ordered-imports": false,
     "align": false,
     "quotemark": [
