@@ -1,4 +1,4 @@
-import {Message} from 'discord.js'
+import {Message, PartialMessage} from 'discord.js'
 import {Command} from './models/command'
 
 export class OperationHandler {
