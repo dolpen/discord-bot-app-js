@@ -160,7 +160,7 @@ operationHandler.addHandler('play', (message, command) => {
         .then(([url, channel]) => {
             channel.join()
                 .then((connection) => {
-                    const dl = ytdl(url , { filter: 'audio'})
+                    const dl = ytdl(url)
                         .on('error', (error) => {
                             debug(error.message)
                         })
